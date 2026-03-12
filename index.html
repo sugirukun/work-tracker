@@ -92,7 +92,7 @@
   </select>
   <button class="btn btn-today" onclick="loadToday()">今日に戻る</button>
   <button class="btn btn-csv" onclick="downloadCSV()">CSVダウンロード</button>
-  <button class="btn btn-print" onclick="window.print()">🖨️ 印刷</button>
+  <button class="btn btn-print" onclick="printView()">🖨️ 印刷</button>
 </div>
 
 <div class="total-bar">
@@ -368,6 +368,56 @@ async function saveModal() {
   if (sub) sub.textContent = s || '';
   updateGrandTotal();
   closeModal();
+}
+
+function printView() {
+  const rows_html = BLOCKS.map((blk, bi) => {
+    let rows = ROWS.map((row, ri) => {
+      const cols = COLS.map((_, ci) => {
+        const t = cellTotal(cellKey(bi, ri, ci));
+        return `<td>${t || ''}</td>`;
+      }).join('');
+      const cat = ri === 0 || ROWS[ri-1].cat !== row.cat
+        ? `<td rowspan="${ROWS.filter(r=>r.cat===row.cat).length}">${row.cat}</td>` : '';
+      return `<tr>${cat}<td>${row.label}</td>${cols}</tr>`;
+    }).join('');
+    const subtotals = COLS.map((_, ci) => {
+      let s = 0; ROWS.forEach((_,ri) => { s += cellTotal(cellKey(bi,ri,ci)); });
+      return `<td><b>${s||''}</b></td>`;
+    }).join('');
+    return `
+      <div class="blk">
+        <div class="blk-head" style="background:${ ['#1a73e8','#9c27b0','#e65100'][bi] }">${blk.name}</div>
+        <table>
+          <tr><th>区分</th><th>企画名</th>${COLS.map(c=>`<th>${c}</th>`).join('')}</tr>
+          ${rows}
+          <tr><td colspan="2"><b>小計</b></td>${subtotals}</tr>
+        </table>
+      </div>`;
+  }).join('');
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; font-size: 7.5px; padding: 4mm; }
+    h2 { text-align: center; font-size: 11px; margin-bottom: 3mm; }
+    .blk { margin-bottom: 2mm; }
+    .blk-head { color: white; font-weight: bold; font-size: 8px; padding: 2px 5px; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    th, td { border: 0.5px solid #aaa; padding: 1px 2px; text-align: center; overflow: hidden; font-size: 7px; }
+    th:nth-child(1), td:nth-child(1) { width: 9%; }
+    th:nth-child(2), td:nth-child(2) { width: 20%; text-align: left; }
+    th:nth-child(n+3), td:nth-child(n+3) { width: 11.8%; }
+    th { background: #f0f0f0; white-space: nowrap; }
+    @page { size: A4 portrait; margin: 0; }
+    @media print { body { padding: 4mm; } }
+  </style></head><body>
+  <h2>作業時間記録　${formatDateLabel(currentDate)}</h2>
+  ${rows_html}
+  <script>window.onload=()=>{window.print();window.close();}<\/script>
+  </body></html>`);
+  win.document.close();
 }
 
 function closeModal() {
