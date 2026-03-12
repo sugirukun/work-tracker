@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>作業時間記録</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: sans-serif; font-size: 13px; background: #f0f2f5; }
+  header { background: #1a73e8; color: white; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 16px; }
+  input[type=date] { background: rgba(255,255,255,0.2); border: none; border-radius: 12px; padding: 4px 10px; font-size: 12px; color: white; cursor: pointer; }
+  .toolbar { display: flex; gap: 8px; padding: 10px 16px; background: white; border-bottom: 1px solid #ddd; flex-wrap: wrap; align-items: center; }
+  .btn { padding: 6px 14px; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; }
+  .btn-csv { background: #34a853; color: white; }
+  .btn-today { background: #1a73e8; color: white; }
+  .total-bar { background: #e8f0fe; padding: 8px 16px; font-weight: bold; color: #1a73e8; font-size: 14px; border-bottom: 1px solid #c5cae9; display: flex; align-items: center; gap: 12px; }
+  .sync-status { font-size: 11px; font-weight: normal; color: #888; }
+  .sync-status.syncing { color: #f57c00; }
+  .sync-status.synced { color: #2e7d32; }
+  .sync-status.error { color: #c62828; }
+  .content { padding: 12px 16px; }
+  .block { background: white; border-radius: 8px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .block-header { padding: 8px 12px; font-weight: bold; font-size: 14px; color: white; }
+  .bh-s { background: #1a73e8; }
+  .bh-p { background: #9c27b0; }
+  .bh-a { background: #e65100; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f8f9fa; padding: 6px 4px; text-align: center; border: 1px solid #e0e0e0; font-size: 11px; color: #555; white-space: nowrap; }
+  td { border: 1px solid #e0e0e0; padding: 3px; text-align: center; }
+  td.label { text-align: left; padding: 4px 6px; font-size: 11px; color: #333; background: #fafafa; white-space: nowrap; }
+  td.category { background: #f0f4ff; font-weight: bold; font-size: 11px; color: #444; padding: 4px 6px; }
+  .cell-btn { width: 100%; min-height: 36px; border: 1px dashed #ccc; border-radius: 4px; background: #fffde7; cursor: pointer; font-size: 12px; color: #333; padding: 3px; display: flex; align-items: center; justify-content: center; }
+  .cell-btn.has-data { background: #e8f5e9; border-color: #81c784; color: #2e7d32; font-weight: bold; }
+  .subtotal { background: #f3e5f5; font-weight: bold; font-size: 12px; color: #6a1b9a; padding: 4px; }
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+  .overlay.open { display: flex; }
+  .modal { background: white; border-radius: 12px; width: 320px; max-width: 95vw; padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+  .modal h3 { font-size: 14px; margin-bottom: 12px; color: #333; }
+  .modal h3 span { color: #1a73e8; }
+  .person-row { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+  .person-row input[type=text] { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 6px 8px; font-size: 13px; }
+  .person-row input[type=number] { width: 70px; border: 1px solid #ddd; border-radius: 6px; padding: 6px 4px; font-size: 13px; text-align: center; }
+  .person-row input:focus { outline: none; border-color: #1a73e8; }
+  .btn-del { background: #ef5350; color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 13px; }
+  .modal-total { background: #e8f0fe; border-radius: 6px; padding: 8px 12px; font-weight: bold; color: #1a73e8; margin: 10px 0; font-size: 14px; }
+  .btn-add { background: #f1f3f4; border: none; border-radius: 6px; padding: 7px 12px; cursor: pointer; font-size: 12px; width: 100%; margin-bottom: 10px; }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn-cancel { background: #f1f3f4; border: none; border-radius: 6px; padding: 8px 16px; cursor: pointer; font-size: 13px; }
+  .btn-ok { background: #1a73e8; color: white; border: none; border-radius: 6px; padding: 8px 16px; cursor: pointer; font-size: 13px; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📋 作業時間記録</h1>
+  <input type="date" id="todayLabel" onchange="changeDate(this.value)">
+</header>
+
+<div class="toolbar">
+  <select id="historySelect" onchange="loadHistory()">
+    <option value="">── 過去データを見る ──</option>
+  </select>
+  <button class="btn btn-today" onclick="loadToday()">今日に戻る</button>
+  <button class="btn btn-csv" onclick="downloadCSV()">CSVダウンロード</button>
+</div>
+
+<div class="total-bar">
+  今日：<span id="grandTotal">0</span> 分　｜　全期間：<span id="allTotal">0</span> 分（<span id="allDays">0</span>日分）
+  <span class="sync-status" id="syncStatus">●　接続中...</span>
+</div>
+
+<div class="content" id="tableArea"></div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3 id="modalTitle"></h3>
+    <div id="personList"></div>
+    <button class="btn-add" onclick="addPerson()">＋ 人を追加</button>
+    <div class="modal-total">合計：<span id="modalTotal">0</span> 分</div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="btn-ok" onclick="saveModal()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://cfjcrdczfyzqepreluqn.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_PxeXUC7XVtPhOTXlHKIu_Q_EV5f1Gco';
+const HEADERS = { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY };
+
+const COLS = ['展開陳列','POP準備','POP取付','POP取外し','企画終了後対応','在庫整理'];
+const BLOCKS = [{ name: '社員', cls: 'bh-s' }, { name: '準社員', cls: 'bh-p' }, { name: 'アルバイト', cls: 'bh-a' }];
+const ROWS = [
+  { cat: '日替わり', label: '日替わり' },
+  { cat: '期間', label: '期間特売（企画以外）' },
+  { cat: '期間', label: '割引大会' },
+  { cat: '期間', label: '厳選超特価' },
+  { cat: '期間', label: '均一市' },
+  { cat: '期間', label: 'よりどりセール' },
+  { cat: '期間', label: 'くらし良好フェアー' },
+  { cat: '期間', label: 'コストコフェアー' },
+  { cat: '月間', label: '月間特売' },
+  { cat: '月間', label: 'ポイント' }
+];
+
+let currentDate = today();
+let data = {};
+let modalKey = null;
+let allDates = [];
+
+function today() { return new Date().toISOString().slice(0,10); }
+function cellKey(bi, ri, ci) { return `${bi}_${ri}_${ci}`; }
+function cellTotal(key) { return (data[key] || []).reduce((s, p) => s + (parseInt(p.min) || 0), 0); }
+
+function setStatus(msg, cls) {
+  const el = document.getElementById('syncStatus');
+  el.textContent = '● ' + msg;
+  el.className = 'sync-status ' + cls;
+}
+
+async function fetchData(date) {
+  setStatus('読み込み中...', 'syncing');
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/records?date=eq.${date}&select=*`, { headers: HEADERS });
+    const rows = await res.json();
+    data = {};
+    rows.forEach(r => {
+      const key = cellKey(r.block_idx, r.row_idx, r.col_idx);
+      try { data[key] = JSON.parse(r.people); } catch(e) {}
+    });
+    setStatus('同期済み', 'synced');
+  } catch(e) {
+    setStatus('接続エラー', 'error');
+  }
+}
+
+async function fetchAllTotals() {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/records?select=date,people`, { headers: HEADERS });
+    const rows = await res.json();
+    const dateSet = new Set();
+    let allTotal = 0;
+    rows.forEach(r => {
+      dateSet.add(r.date);
+      try {
+        JSON.parse(r.people).forEach(p => { allTotal += parseInt(p.min) || 0; });
+      } catch(e) {}
+    });
+    allDates = Array.from(dateSet).sort((a,b) => b.localeCompare(a));
+    document.getElementById('allTotal').textContent = allTotal;
+    document.getElementById('allDays').textContent = allDates.length;
+    refreshHistory();
+  } catch(e) {}
+}
+
+async function upsertCell(key, people) {
+  const [bi, ri, ci] = key.split('_').map(Number);
+  setStatus('保存中...', 'syncing');
+  try {
+    // 既存レコードを検索
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/records?date=eq.${currentDate}&block_idx=eq.${bi}&row_idx=eq.${ri}&col_idx=eq.${ci}&select=id`, { headers: HEADERS });
+    const existing = await res.json();
+    const body = JSON.stringify({ date: currentDate, block_idx: bi, row_idx: ri, col_idx: ci, people: JSON.stringify(people) });
+    if (existing.length > 0) {
+      await fetch(`${SUPABASE_URL}/rest/v1/records?id=eq.${existing[0].id}`, { method: 'PATCH', headers: { ...HEADERS, 'Prefer': 'return=minimal' }, body });
+    } else {
+      await fetch(`${SUPABASE_URL}/rest/v1/records`, { method: 'POST', headers: { ...HEADERS, 'Prefer': 'return=minimal' }, body });
+    }
+    setStatus('同期済み', 'synced');
+    fetchAllTotals();
+  } catch(e) {
+    setStatus('保存エラー', 'error');
+  }
+}
+
+async function deleteCell(key) {
+  const [bi, ri, ci] = key.split('_').map(Number);
+  await fetch(`${SUPABASE_URL}/rest/v1/records?date=eq.${currentDate}&block_idx=eq.${bi}&row_idx=eq.${ri}&col_idx=eq.${ci}`, { method: 'DELETE', headers: HEADERS });
+  fetchAllTotals();
+}
+
+function updateGrandTotal() {
+  let total = 0;
+  Object.values(data).forEach(arr => arr.forEach(p => { total += parseInt(p.min) || 0; }));
+  document.getElementById('grandTotal').textContent = total;
+}
+
+function render() {
+  document.getElementById('todayLabel').value = currentDate;
+  const area = document.getElementById('tableArea');
+  area.innerHTML = '';
+  BLOCKS.forEach((blk, bi) => {
+    const div = document.createElement('div');
+    div.className = 'block';
+    let html = `<div class="block-header ${blk.cls}">${blk.name}</div><table>`;
+    html += '<tr><th>区分</th><th>企画名</th>';
+    COLS.forEach(c => html += `<th>${c}</th>`);
+    html += '</tr>';
+    let lastCat = '';
+    ROWS.forEach((row, ri) => {
+      html += '<tr>';
+      if (row.cat !== lastCat) {
+        const span = ROWS.filter(r => r.cat === row.cat).length;
+        html += `<td class="category" rowspan="${span}">${row.cat}</td>`;
+        lastCat = row.cat;
+      }
+      html += `<td class="label">${row.label}</td>`;
+      COLS.forEach((col, ci) => {
+        const key = cellKey(bi, ri, ci);
+        const total = cellTotal(key);
+        html += `<td><button class="cell-btn ${total > 0 ? 'has-data' : ''}" onclick="openModal('${key}','${blk.name}','${row.label}','${col}')" id="btn_${key}">${total > 0 ? total + '分' : '─'}</button></td>`;
+      });
+      html += '</tr>';
+    });
+    html += '<tr><td class="subtotal" colspan="2">小計</td>';
+    COLS.forEach((_, ci) => {
+      let s = 0;
+      ROWS.forEach((_, ri) => { s += cellTotal(cellKey(bi, ri, ci)); });
+      html += `<td class="subtotal" id="sub_${bi}_${ci}">${s || ''}</td>`;
+    });
+    html += '</tr></table>';
+    div.innerHTML = html;
+    area.appendChild(div);
+  });
+  updateGrandTotal();
+}
+
+function refreshHistory() {
+  const sel = document.getElementById('historySelect');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">── 過去データを見る ──</option>';
+  allDates.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d; opt.textContent = d;
+    if (d === cur) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+async function load(d) {
+  currentDate = d;
+  await fetchData(d);
+  render();
+}
+
+function loadHistory() {
+  const d = document.getElementById('historySelect').value;
+  if (d) load(d);
+}
+
+function loadToday() {
+  document.getElementById('historySelect').value = '';
+  load(today());
+}
+
+function changeDate(d) { if (d) load(d); }
+
+// モーダル
+function openModal(key, blkName, rowLabel, colName) {
+  modalKey = key;
+  document.getElementById('modalTitle').innerHTML = `<span>${blkName}</span>　${rowLabel}　／　${colName}`;
+  const people = JSON.parse(JSON.stringify(data[key] || [{ name: '', min: '' }]));
+  renderPersonList(people);
+  calcModalTotal();
+  document.getElementById('overlay').classList.add('open');
+}
+
+function renderPersonList(people) {
+  const list = document.getElementById('personList');
+  list.innerHTML = '';
+  people.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'person-row';
+    row.innerHTML = `
+      <input type="text" placeholder="名前" value="${p.name}" oninput="calcModalTotal()">
+      <input type="number" min="0" inputmode="numeric" pattern="[0-9]*" placeholder="分" value="${p.min}" oninput="calcModalTotal()">
+      <button class="btn-del" onclick="removePerson(${i})">✕</button>`;
+    list.appendChild(row);
+  });
+}
+
+function getPeople() {
+  return Array.from(document.querySelectorAll('.person-row')).map(row => {
+    const inputs = row.querySelectorAll('input');
+    return { name: inputs[0].value, min: inputs[1].value };
+  });
+}
+
+function calcModalTotal() {
+  const total = getPeople().reduce((s, p) => s + (parseInt(p.min) || 0), 0);
+  document.getElementById('modalTotal').textContent = total;
+}
+
+function addPerson() {
+  const people = getPeople();
+  people.push({ name: '', min: '' });
+  renderPersonList(people);
+}
+
+function removePerson(i) {
+  const people = getPeople();
+  people.splice(i, 1);
+  if (!people.length) people.push({ name: '', min: '' });
+  renderPersonList(people);
+  calcModalTotal();
+}
+
+async function saveModal() {
+  const people = getPeople().filter(p => p.name || p.min);
+  if (people.length > 0) {
+    data[modalKey] = people;
+    await upsertCell(modalKey, people);
+  } else {
+    delete data[modalKey];
+    await deleteCell(modalKey);
+  }
+  const [bi, ri, ci] = modalKey.split('_').map(Number);
+  const total = cellTotal(modalKey);
+  const btn = document.getElementById('btn_' + modalKey);
+  if (btn) { btn.textContent = total > 0 ? total + '分' : '─'; btn.className = 'cell-btn' + (total > 0 ? ' has-data' : ''); }
+  let s = 0;
+  ROWS.forEach((_, r) => { s += cellTotal(cellKey(bi, r, ci)); });
+  const sub = document.getElementById(`sub_${bi}_${ci}`);
+  if (sub) sub.textContent = s || '';
+  updateGrandTotal();
+  closeModal();
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+  modalKey = null;
+}
+
+async function downloadCSV() {
+  let csv = '日付,雇用区分,区分,企画名,作業,名前,時間(分)\n';
+  BLOCKS.forEach((blk, bi) => {
+    ROWS.forEach((row, ri) => {
+      COLS.forEach((col, ci) => {
+        (data[cellKey(bi,ri,ci)] || []).forEach(p => {
+          csv += `${currentDate},${blk.name},${row.cat},${row.label},${col},${p.name},${p.min}\n`;
+        });
+      });
+    });
+  });
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = currentDate + '_作業時間.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// リアルタイム購読
+function subscribeRealtime() {
+  const ws = new WebSocket(`wss://cfjcrdczfyzqepreluqn.supabase.co/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`);
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ topic: 'realtime:public:records', event: 'phx_join', payload: {}, ref: '1' }));
+  };
+  ws.onmessage = async (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.event === 'INSERT' || msg.event === 'UPDATE' || msg.event === 'DELETE') {
+      const rec = msg.payload?.record || msg.payload?.old_record;
+      if (rec && rec.date === currentDate) {
+        await fetchData(currentDate);
+        render();
+      }
+      fetchAllTotals();
+    }
+  };
+  ws.onclose = () => {
+    // 切断時は3秒後に再接続
+    setTimeout(subscribeRealtime, 3000);
+  };
+}
+
+// 起動
+load(today());
+fetchAllTotals();
+subscribeRealtime();
+</script>
+</body>
+</html>
