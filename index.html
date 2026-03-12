@@ -211,7 +211,8 @@ function render() {
   BLOCKS.forEach((blk, bi) => {
     const div = document.createElement('div');
     div.className = 'block block-' + ['s','p','a'][bi];
-    let html = `<div class="block-header ${blk.cls}">${blk.name}</div><table>`;
+    const dateHtml = bi > 0 ? `<div style="padding:4px 12px 0;font-size:14px;background:#f9f9f9;"><span style="font-size:18px">${formatDateLabel(currentDate).split('(')[0]}</span><span style="font-size:22px">(${formatDateLabel(currentDate).split('(')[1]}</span></div>` : '';
+    let html = `${dateHtml}<div class="block-header ${blk.cls}">${blk.name}</div><table>`;
     html += '<tr><th>区分</th><th>企画名</th>';
     COLS.forEach(c => html += `<th>${c}</th>`);
     html += '</tr>';
@@ -351,15 +352,17 @@ function closeModal() {
 }
 
 async function downloadCSV() {
-  let csv = '日付,雇用区分,区分,企画名,作業,名前,時間(分)\n';
+  let csv = '';
   BLOCKS.forEach((blk, bi) => {
+    csv += `${blk.name},（計測単位分）,${COLS.join(',')}\n`;
+    let lastCat = '';
     ROWS.forEach((row, ri) => {
-      COLS.forEach((col, ci) => {
-        (data[cellKey(bi,ri,ci)] || []).forEach(p => {
-          csv += `${currentDate},${blk.name},${row.cat},${row.label},${col},${p.name},${p.min}\n`;
-        });
-      });
+      const totals = COLS.map((_, ci) => cellTotal(cellKey(bi, ri, ci)));
+      const cat = row.cat !== lastCat ? row.cat : '';
+      lastCat = row.cat;
+      csv += `${cat},${row.label},${totals.join(',')}\n`;
     });
+    csv += ',,,,,,,\n';
   });
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
