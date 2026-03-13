@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>作業時間記録</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: sans-serif; font-size: 13px; background: #f0f2f5; }
@@ -14,42 +13,21 @@
   .toolbar { display: flex; gap: 8px; padding: 10px 16px; background: white; border-bottom: 1px solid #ddd; flex-wrap: wrap; align-items: center; }
   .btn { padding: 6px 14px; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; }
   .btn-csv { background: #34a853; color: white; }
-  .btn-print { background: #757575; color: white; }
-  @media print {
-    header, .toolbar, .total-bar, .overlay { display: none !important; }
-    body { background: white; }
-    .content { padding: 0; margin: 0; }
-    .block { box-shadow: none; margin-bottom: 2px; border-radius: 0; overflow: visible; }
-    .block-header { padding: 2px 4px; font-size: 8px; }
-    .block > div:first-child { display: none; }
-    table { width: 100%; min-width: unset; table-layout: fixed; }
-    th { font-size: 6px; padding: 1px; white-space: nowrap; overflow: hidden; }
-    th:nth-child(1) { width: 8%; }
-    th:nth-child(2) { width: 18%; }
-    th:nth-child(n+3) { width: 12.3%; }
-    td { font-size: 6px; padding: 1px; overflow: hidden; }
-    td.label { font-size: 6px; padding: 1px 2px; white-space: nowrap; overflow: hidden; }
-    td.category { font-size: 6px; padding: 1px 2px; }
-    .cell-btn { font-size: 6px; min-height: 12px; border: none; background: none !important; color: black !important; padding: 0; display: block; }
-    .subtotal { font-size: 6px; padding: 1px; }
-    .print-header { display: block !important; text-align: center; font-size: 11px; font-weight: bold; margin-bottom: 3px; }
-    @page { size: A4 portrait; margin: 6mm; }
-  }
-  .print-header { display: none; }
   .btn-today { background: #1a73e8; color: white; }
-  .total-bar { background: #e8f0fe; padding: 8px 16px; font-weight: bold; color: #1a73e8; font-size: 14px; border-bottom: 1px solid #c5cae9; display: flex; align-items: center; gap: 12px; }
+  .btn-print { background: #757575; color: white; }
+  .total-bar { background: #e8f0fe; padding: 8px 16px; font-weight: bold; color: #1a73e8; font-size: 14px; border-bottom: 1px solid #c5cae9; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .sync-status { font-size: 11px; font-weight: normal; color: #888; }
   .sync-status.syncing { color: #f57c00; }
   .sync-status.synced { color: #2e7d32; }
   .sync-status.error { color: #c62828; }
+  .block-totals { background: #f0f4ff; padding: 6px 16px; font-size: 14px; border-bottom: 1px solid #c5cae9; display: flex; gap: 16px; flex-wrap: wrap; }
   .content { padding: 12px 16px; }
   .block { background: white; border-radius: 8px; margin-bottom: 16px; overflow-x: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-  .block table { min-width: 600px; }
   .block-header { padding: 8px 12px; font-weight: bold; font-size: 14px; color: white; }
   .bh-s { background: #1a73e8; }
   .bh-p { background: #9c27b0; }
   .bh-a { background: #e65100; }
-  table { width: 100%; border-collapse: collapse; }
+  table { width: 100%; border-collapse: collapse; min-width: 600px; }
   th { background: #f8f9fa; padding: 6px 4px; text-align: center; border: 1px solid #e0e0e0; font-size: 11px; color: #555; white-space: nowrap; }
   td { border: 1px solid #e0e0e0; padding: 3px; text-align: center; }
   td.label { text-align: left; padding: 4px 6px; font-size: 11px; color: #333; background: #fafafa; white-space: nowrap; }
@@ -77,6 +55,27 @@
   .modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
   .btn-cancel { background: #f1f3f4; border: none; border-radius: 6px; padding: 8px 16px; cursor: pointer; font-size: 13px; }
   .btn-ok { background: #1a73e8; color: white; border: none; border-radius: 6px; padding: 8px 16px; cursor: pointer; font-size: 13px; font-weight: bold; }
+  .print-header { display: none; }
+  @media print {
+    header, .toolbar, .total-bar, .block-totals, .overlay { display: none !important; }
+    body { background: white; }
+    .content { padding: 0; margin: 0; }
+    .block { box-shadow: none; margin-bottom: 2px; border-radius: 0; overflow: visible; }
+    .block-header { padding: 2px 4px; font-size: 8px; }
+    .block > div:first-child { display: none; }
+    table { width: 100%; min-width: unset; table-layout: fixed; }
+    th { font-size: 6px; padding: 1px; white-space: nowrap; overflow: hidden; }
+    th:nth-child(1) { width: 8%; }
+    th:nth-child(2) { width: 18%; }
+    th:nth-child(n+3) { width: 12.3%; }
+    td { font-size: 6px; padding: 1px; overflow: hidden; }
+    td.label { font-size: 6px; padding: 1px 2px; white-space: nowrap; }
+    td.category { font-size: 6px; padding: 1px 2px; }
+    .cell-btn { font-size: 6px; min-height: 12px; border: none; background: none !important; color: black !important; padding: 0; display: block; }
+    .subtotal { font-size: 6px; padding: 1px; }
+    .print-header { display: block !important; text-align: center; font-size: 11px; font-weight: bold; margin-bottom: 3px; }
+    @page { size: A4 portrait; margin: 6mm; }
+  }
 </style>
 </head>
 <body>
@@ -91,7 +90,7 @@
     <option value="">── 過去データを見る ──</option>
   </select>
   <button class="btn btn-today" onclick="loadToday()">今日に戻る</button>
-  <button class="btn btn-csv" onclick="downloadCSV()">CSVダウンロード</button>
+  <button class="btn btn-csv" onclick="openCsvModal()">CSVダウンロード</button>
   <button class="btn btn-print" onclick="printView()">🖨️ 印刷</button>
 </div>
 
@@ -99,10 +98,16 @@
   <span id="currentDateLabel">--/--</span>：<span id="grandTotal">0</span> 分　｜　全期間：<span id="allTotal">0</span> 分（<span id="allDays">0</span>日分）
   <span class="sync-status" id="syncStatus">●　接続中...</span>
 </div>
+<div class="block-totals">
+  <span style="color:#1a73e8;">社員合計：<b id="totalS">0</b> 分</span>
+  <span style="color:#9c27b0;">準社員合計：<b id="totalP">0</b> 分</span>
+  <span style="color:#e65100;">アルバイト合計：<b id="totalA">0</b> 分</span>
+</div>
 
 <div class="print-header" id="printHeader"></div>
 <div class="content" id="tableArea"></div>
 
+<!-- 入力モーダル -->
 <div class="overlay" id="overlay">
   <div class="modal">
     <h3 id="modalTitle"></h3>
@@ -112,6 +117,57 @@
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
       <button class="btn-ok" onclick="saveModal()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- CSVモーダル -->
+<div class="overlay" id="csvOverlay">
+  <div class="modal">
+    <h3>CSVダウンロード</h3>
+    <div id="csvStep1">
+      <p style="font-size:12px;margin-bottom:8px;">期間を選択してください</p>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+        <label style="font-size:12px;white-space:nowrap;width:42px;">開始日</label>
+        <div style="flex:1;border:1px solid #ddd;border-radius:6px;padding:5px 8px;font-size:13px;cursor:pointer;background:white;" id="csvStartDisplay" onclick="openCal('start')">選択してください</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+        <label style="font-size:12px;white-space:nowrap;width:42px;">終了日</label>
+        <div style="flex:1;border:1px solid #ddd;border-radius:6px;padding:5px 8px;font-size:13px;cursor:pointer;background:white;" id="csvEndDisplay" onclick="openCal('end')">選択してください</div>
+      </div>
+      <input type="hidden" id="csvStartDate">
+      <input type="hidden" id="csvEndDate">
+      <!-- カレンダー -->
+      <div id="calBox" style="display:none;border:1px solid #ddd;border-radius:8px;padding:8px;margin-bottom:8px;background:#fafafa;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <button onclick="calMove(-1)" style="border:none;background:none;font-size:18px;cursor:pointer;">‹</button>
+          <span id="calTitle" style="font-size:13px;font-weight:bold;"></span>
+          <button onclick="calMove(1)" style="border:none;background:none;font-size:18px;cursor:pointer;">›</button>
+        </div>
+        <div id="calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:12px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeCsvModal()">キャンセル</button>
+        <button class="btn-ok" onclick="csvStep2()">次へ</button>
+      </div>
+    </div>
+    <div id="csvStep2" style="display:none;">
+      <p style="font-size:12px;margin-bottom:8px;">出力する雇用区分を選択してください</p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+        <label style="font-size:13px;display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="chkS" checked> <span style="color:#1a73e8;font-weight:bold;">社員</span>
+        </label>
+        <label style="font-size:13px;display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="chkP" checked> <span style="color:#9c27b0;font-weight:bold;">準社員</span>
+        </label>
+        <label style="font-size:13px;display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="chkA" checked> <span style="color:#e65100;font-weight:bold;">アルバイト</span>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="csvBack()">戻る</button>
+        <button class="btn-ok" onclick="execDownloadCSV()">ダウンロード</button>
+      </div>
     </div>
   </div>
 </div>
@@ -142,13 +198,26 @@ let modalKey = null;
 let allDates = [];
 
 function today() { return new Date().toISOString().slice(0,10); }
+function storageKey(d) { return 'work2_' + d; }
 function cellKey(bi, ri, ci) { return `${bi}_${ri}_${ci}`; }
 function cellTotal(key) { return (data[key] || []).reduce((s, p) => s + (parseInt(p.min) || 0), 0); }
+function cellTotal2(d, bi, ri, ci) {
+  const key = cellKey(bi, ri, ci);
+  return (d[key] || []).reduce((s, p) => s + (parseInt(p.min) || 0), 0) || '';
+}
 
 function setStatus(msg, cls) {
   const el = document.getElementById('syncStatus');
   el.textContent = '● ' + msg;
   el.className = 'sync-status ' + cls;
+}
+
+function formatDateLabel(d) {
+  const date = new Date(d + 'T00:00:00');
+  const m = date.getMonth() + 1;
+  const day = date.getDate();
+  const dow = ['日','月','火','水','木','金','土'][date.getDay()];
+  return `${String(m).padStart(2,'0')}/${String(day).padStart(2,'0')}(${dow})`;
 }
 
 async function fetchData(date) {
@@ -162,9 +231,7 @@ async function fetchData(date) {
       try { data[key] = JSON.parse(r.people); } catch(e) {}
     });
     setStatus('同期済み', 'synced');
-  } catch(e) {
-    setStatus('接続エラー', 'error');
-  }
+  } catch(e) { setStatus('接続エラー', 'error'); }
 }
 
 async function fetchAllTotals() {
@@ -175,9 +242,7 @@ async function fetchAllTotals() {
     let allTotal = 0;
     rows.forEach(r => {
       dateSet.add(r.date);
-      try {
-        JSON.parse(r.people).forEach(p => { allTotal += parseInt(p.min) || 0; });
-      } catch(e) {}
+      try { JSON.parse(r.people).forEach(p => { allTotal += parseInt(p.min) || 0; }); } catch(e) {}
     });
     allDates = Array.from(dateSet).sort((a,b) => b.localeCompare(a));
     document.getElementById('allTotal').textContent = allTotal;
@@ -190,7 +255,6 @@ async function upsertCell(key, people) {
   const [bi, ri, ci] = key.split('_').map(Number);
   setStatus('保存中...', 'syncing');
   try {
-    // 既存レコードを検索
     const res = await fetch(`${SUPABASE_URL}/rest/v1/records?date=eq.${currentDate}&block_idx=eq.${bi}&row_idx=eq.${ri}&col_idx=eq.${ci}&select=id`, { headers: HEADERS });
     const existing = await res.json();
     const body = JSON.stringify({ date: currentDate, block_idx: bi, row_idx: ri, col_idx: ci, people: JSON.stringify(people) });
@@ -201,9 +265,7 @@ async function upsertCell(key, people) {
     }
     setStatus('同期済み', 'synced');
     fetchAllTotals();
-  } catch(e) {
-    setStatus('保存エラー', 'error');
-  }
+  } catch(e) { setStatus('保存エラー', 'error'); }
 }
 
 async function deleteCell(key) {
@@ -212,20 +274,20 @@ async function deleteCell(key) {
   fetchAllTotals();
 }
 
-function formatDateLabel(d) {
-  const date = new Date(d + 'T00:00:00');
-  const m = date.getMonth() + 1;
-  const day = date.getDate();
-  const dow = ['日','月','火','水','木','金','土'][date.getDay()];
-  return `${String(m).padStart(2,'0')}/${String(day).padStart(2,'0')}(${dow})`;
-}
-
 function updateGrandTotal() {
   let total = 0;
-  Object.values(data).forEach(arr => arr.forEach(p => { total += parseInt(p.min) || 0; }));
+  const bt = [0, 0, 0];
+  Object.entries(data).forEach(([key, arr]) => {
+    const bi = parseInt(key.split('_')[0]);
+    arr.forEach(p => { const m = parseInt(p.min)||0; total += m; bt[bi] += m; });
+  });
   document.getElementById('grandTotal').textContent = total;
+  document.getElementById('totalS').textContent = bt[0];
+  document.getElementById('totalP').textContent = bt[1];
+  document.getElementById('totalA').textContent = bt[2];
   const [mmdd, dow] = formatDateLabel(currentDate).split('(');
   document.getElementById('currentDateLabel').innerHTML = `<span style="font-size:18px">${mmdd}</span><span style="font-size:22px">(${dow}</span>`;
+  document.getElementById('printHeader').textContent = `作業時間記録　${formatDateLabel(currentDate)}`;
 }
 
 function render() {
@@ -235,7 +297,7 @@ function render() {
   BLOCKS.forEach((blk, bi) => {
     const div = document.createElement('div');
     div.className = 'block block-' + ['s','p','a'][bi];
-    const dateHtml = bi > 0 ? `<div style="padding:4px 12px 0;font-size:14px;background:#f9f9f9;"><span style="font-size:18px">${formatDateLabel(currentDate).split('(')[0]}</span><span style="font-size:22px">(${formatDateLabel(currentDate).split('(')[1]}</span></div>` : '';
+    const dateHtml = bi > 0 ? `<div style="padding:4px 12px 0;background:#f9f9f9;"><span style="font-size:18px">${formatDateLabel(currentDate).split('(')[0]}</span><span style="font-size:22px">(${formatDateLabel(currentDate).split('(')[1]}</span></div>` : '';
     let html = `${dateHtml}<div class="block-header ${blk.cls}">${blk.name}</div><table>`;
     html += '<tr><th>区分</th><th>企画名</th>';
     COLS.forEach(c => html += `<th>${c}</th>`);
@@ -258,8 +320,7 @@ function render() {
     });
     html += '<tr><td class="subtotal" colspan="2">小計</td>';
     COLS.forEach((_, ci) => {
-      let s = 0;
-      ROWS.forEach((_, ri) => { s += cellTotal(cellKey(bi, ri, ci)); });
+      let s = 0; ROWS.forEach((_, ri) => { s += cellTotal(cellKey(bi, ri, ci)); });
       html += `<td class="subtotal" id="sub_${bi}_${ci}">${s || ''}</td>`;
     });
     html += '</tr></table>';
@@ -299,7 +360,7 @@ function loadToday() {
 
 function changeDate(d) { if (d) load(d); }
 
-// モーダル
+// 入力モーダル
 function openModal(key, blkName, rowLabel, colName) {
   modalKey = key;
   document.getElementById('modalTitle').innerHTML = `<span>${blkName}</span>　${rowLabel}　／　${colName}`;
@@ -370,6 +431,184 @@ async function saveModal() {
   closeModal();
 }
 
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+  modalKey = null;
+}
+
+// カスタムカレンダー
+let calTarget = 'start';
+let calYear, calMonth;
+
+function openCal(target) {
+  calTarget = target;
+  const val = document.getElementById(target === 'start' ? 'csvStartDate' : 'csvEndDate').value;
+  const d = val ? new Date(val + 'T00:00:00') : new Date();
+  calYear = d.getFullYear();
+  calMonth = d.getMonth();
+  renderCal();
+  document.getElementById('calBox').style.display = 'block';
+}
+
+function calMove(dir) {
+  calMonth += dir;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCal();
+}
+
+function renderCal() {
+  document.getElementById('calTitle').textContent = `${calYear}年${calMonth+1}月`;
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  ['日','月','火','水','木','金','土'].forEach(d => {
+    const el = document.createElement('div');
+    el.textContent = d;
+    el.style.cssText = 'font-weight:bold;padding:3px 0;color:#555;';
+    grid.appendChild(el);
+  });
+  const first = new Date(calYear, calMonth, 1).getDay();
+  const last = new Date(calYear, calMonth+1, 0).getDate();
+  const startVal = document.getElementById('csvStartDate').value;
+  const endVal = document.getElementById('csvEndDate').value;
+  for (let i = 0; i < first; i++) {
+    grid.appendChild(document.createElement('div'));
+  }
+  for (let d = 1; d <= last; d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const el = document.createElement('div');
+    el.textContent = d;
+    el.style.cssText = 'padding:4px 2px;border-radius:50%;cursor:pointer;';
+    if (dateStr === startVal || dateStr === endVal) {
+      el.style.background = '#1a73e8';
+      el.style.color = 'white';
+    } else if (startVal && endVal && dateStr > startVal && dateStr < endVal) {
+      el.style.background = '#e8f0fe';
+    }
+    el.onclick = () => selectCalDate(dateStr);
+    grid.appendChild(el);
+  }
+}
+
+function selectCalDate(dateStr) {
+  const [y, m, d] = dateStr.split('-');
+  const label = `${m}/${d}`;
+  if (calTarget === 'start') {
+    document.getElementById('csvStartDate').value = dateStr;
+    document.getElementById('csvStartDisplay').textContent = label;
+  } else {
+    document.getElementById('csvEndDate').value = dateStr;
+    document.getElementById('csvEndDisplay').textContent = label;
+  }
+  document.getElementById('calBox').style.display = 'none';
+  renderCal();
+}
+
+// CSVモーダル
+function openCsvModal() {
+  document.getElementById('csvStartDate').value = currentDate;
+  document.getElementById('csvEndDate').value = currentDate;
+  document.getElementById('csvStep1').style.display = 'block';
+  document.getElementById('csvStep2').style.display = 'none';
+  document.getElementById('csvOverlay').classList.add('open');
+}
+
+function closeCsvModal() {
+  document.getElementById('csvOverlay').classList.remove('open');
+}
+
+function csvStep2() {
+  const start = document.getElementById('csvStartDate').value;
+  const end = document.getElementById('csvEndDate').value;
+  if (!start || !end || start > end) {
+    alert('正しい期間を選択してください');
+    return;
+  }
+  document.getElementById('csvStep1').style.display = 'none';
+  document.getElementById('csvStep2').style.display = 'block';
+}
+
+function csvBack() {
+  document.getElementById('csvStep1').style.display = 'block';
+  document.getElementById('csvStep2').style.display = 'none';
+}
+
+async function execDownloadCSV() {
+  const start = document.getElementById('csvStartDate').value;
+  const end = document.getElementById('csvEndDate').value;
+  const chk = [
+    document.getElementById('chkS').checked,
+    document.getElementById('chkP').checked,
+    document.getElementById('chkA').checked
+  ];
+  closeCsvModal();
+  setStatus('取得中...', 'syncing');
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/records?date=gte.${start}&date=lte.${end}&select=*`, { headers: HEADERS });
+    const rows = await res.json();
+    setStatus('同期済み', 'synced');
+    const dateMap = {};
+    rows.forEach(r => {
+      if (!dateMap[r.date]) dateMap[r.date] = {};
+      const key = cellKey(r.block_idx, r.row_idx, r.col_idx);
+      try { dateMap[r.date][key] = JSON.parse(r.people); } catch(e) {}
+    });
+    // 期間合計を集計
+    const merged = {};
+    Object.values(dateMap).forEach(d => {
+      Object.entries(d).forEach(([key, people]) => {
+        if (!merged[key]) merged[key] = [];
+        merged[key] = merged[key].concat(people);
+      });
+    });
+
+    let csv = `${start} 〜 ${end}\n`;
+    BLOCKS.forEach((blk, bi) => {
+      if (!chk[bi]) return;
+      csv += `${blk.name},（計測単位分）,${COLS.join(',')}\n`;
+      let lastCat = '';
+      ROWS.forEach((row, ri) => {
+        const totals = COLS.map((_, ci) => {
+          const key = cellKey(bi, ri, ci);
+          return (merged[key] || []).reduce((s, p) => s + (parseInt(p.min) || 0), 0) || '';
+        });
+        const cat = row.cat !== lastCat ? row.cat : '';
+        lastCat = row.cat;
+        csv += `${cat},${row.label},${totals.join(',')}\n`;
+      });
+      csv += ',,,,,,,\n';
+    });
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${start}_${end}_作業時間.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) { setStatus('取得エラー', 'error'); }
+}
+
+// リアルタイム購読
+function subscribeRealtime() {
+  const ws = new WebSocket(`wss://cfjcrdczfyzqepreluqn.supabase.co/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`);
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ topic: 'realtime:public:records', event: 'phx_join', payload: {}, ref: '1' }));
+  };
+  ws.onmessage = async (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.event === 'INSERT' || msg.event === 'UPDATE' || msg.event === 'DELETE') {
+      const rec = msg.payload?.record || msg.payload?.old_record;
+      if (rec && rec.date === currentDate) {
+        await fetchData(currentDate);
+        render();
+      }
+      fetchAllTotals();
+    }
+  };
+  ws.onclose = () => { setTimeout(subscribeRealtime, 3000); };
+}
+
+// 印刷
 function printView() {
   const rows_html = BLOCKS.map((blk, bi) => {
     let rows = ROWS.map((row, ri) => {
@@ -395,7 +634,6 @@ function printView() {
         </table>
       </div>`;
   }).join('');
-
   const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">
   <style>
@@ -418,53 +656,6 @@ function printView() {
   <script>window.onload=()=>{window.print();window.close();}<\/script>
   </body></html>`);
   win.document.close();
-}
-
-function closeModal() {
-  document.getElementById('overlay').classList.remove('open');
-  modalKey = null;
-}
-
-async function downloadCSV() {
-  let csv = '';
-  BLOCKS.forEach((blk, bi) => {
-    csv += `${blk.name},（計測単位分）,${COLS.join(',')}\n`;
-    let lastCat = '';
-    ROWS.forEach((row, ri) => {
-      const totals = COLS.map((_, ci) => cellTotal(cellKey(bi, ri, ci)));
-      const cat = row.cat !== lastCat ? row.cat : '';
-      lastCat = row.cat;
-      csv += `${cat},${row.label},${totals.join(',')}\n`;
-    });
-    csv += ',,,,,,,\n';
-  });
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = currentDate + '_作業時間.csv'; a.click();
-  URL.revokeObjectURL(url);
-}
-
-// リアルタイム購読
-function subscribeRealtime() {
-  const ws = new WebSocket(`wss://cfjcrdczfyzqepreluqn.supabase.co/realtime/v1/websocket?apikey=${SUPABASE_KEY}&vsn=1.0.0`);
-  ws.onopen = () => {
-    ws.send(JSON.stringify({ topic: 'realtime:public:records', event: 'phx_join', payload: {}, ref: '1' }));
-  };
-  ws.onmessage = async (e) => {
-    const msg = JSON.parse(e.data);
-    if (msg.event === 'INSERT' || msg.event === 'UPDATE' || msg.event === 'DELETE') {
-      const rec = msg.payload?.record || msg.payload?.old_record;
-      if (rec && rec.date === currentDate) {
-        await fetchData(currentDate);
-        render();
-      }
-      fetchAllTotals();
-    }
-  };
-  ws.onclose = () => {
-    // 切断時は3秒後に再接続
-    setTimeout(subscribeRealtime, 3000);
-  };
 }
 
 // 起動
