@@ -59,15 +59,22 @@
   .chart-wrap { position: relative; height: 280px; }
 
   .dow-tabs {
-    display: flex; gap: 6px; padding: 0 20px 10px; flex-wrap: wrap;
+    display: flex; gap: 10px; padding: 0 20px 14px; flex-wrap: wrap;
+    align-items: center;
   }
   .dow-tab {
-    padding: 5px 14px; border-radius: 20px; border: 1.5px solid #ccc;
-    font-size: 12px; font-weight: bold; cursor: pointer;
-    background: white; color: #666; transition: all .15s;
+    padding: 10px 24px; border-radius: 28px; border: 2px solid #ccc;
+    font-size: 15px; font-weight: bold; cursor: pointer;
+    background: white; color: #666; transition: all .2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    letter-spacing: .03em;
   }
-  .dow-tab.active { border-color: #1a73e8; background: #1a73e8; color: white; }
-  .dow-tab:hover:not(.active) { border-color: #1a73e8; color: #1a73e8; }
+  .dow-tab.active {
+    border-color: #1a73e8; background: #1a73e8; color: white;
+    box-shadow: 0 4px 10px rgba(26,115,232,.35);
+    transform: translateY(-2px);
+  }
+  .dow-tab:hover:not(.active) { border-color: #1a73e8; color: #1a73e8; background: #f0f4ff; }
 
   .loading {
     text-align: center; padding: 60px 20px; color: #888;
@@ -264,16 +271,19 @@ function renderAll() {
         ② 曜日ごとの比較
       </div>
     </div>
+    <div style="padding:4px 20px 10px;font-size:13px;color:#555;">
+      👇 曜日ボタンを押すと、その曜日のグラフに切り替わります
+    </div>
     <div class="dow-tabs" id="dowTabs"></div>
     <div class="chart-grid" id="dowGrid">
-      <div class="chart-card">
-        <h3 id="dowChartTitle">-- 曜日のみ 区分別推移</h3>
-        <div class="chart-wrap" style="height:300px"><canvas id="dowChart"></canvas></div>
-      </div>
       <div class="chart-card">
         <h3 id="dowTotalTitle">-- 曜日のみ 合計推移</h3>
         <p style="font-size:11px;color:#888;margin:-10px 0 10px;">合計（黒太線）＋各区分の内訳（点線）</p>
         <div class="chart-wrap" style="height:270px"><canvas id="dowTotal"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3 id="dowChartTitle">-- 曜日のみ 区分別推移</h3>
+        <div class="chart-wrap" style="height:300px"><canvas id="dowChart"></canvas></div>
       </div>
       <div class="chart-card" style="grid-column: 1 / -1;">
         <h3 id="dowWeekAvgTitle">全曜日の平均比較 <span style="font-size:11px;color:#888;font-weight:normal;">― 選択中の曜日を強調・括弧内はデータ件数</span></h3>
@@ -510,19 +520,32 @@ function renderDowChart(dates, byDate, dow) {
     type: 'bar',
     data: {
       labels: weekLabels,
-      datasets: [0, 1, 2].map(bi => ({
-        label: BLOCK_NAMES[bi],
-        data: weekStats.map(w => w.avgs[bi]),
-        // 選択曜日は不透明・他は薄く
-        backgroundColor: DOW_NAMES.map((_, d) =>
-          d === dow ? BLOCK_COLORS[bi] : BLOCK_COLORS[bi] + '44'
-        ),
-        borderColor: DOW_NAMES.map((_, d) =>
-          d === dow ? BLOCK_COLORS[bi] : BLOCK_COLORS[bi] + '99'
-        ),
-        borderWidth: DOW_NAMES.map((_, d) => d === dow ? 2.5 : 1),
-        borderRadius: 4
-      }))
+      datasets: [
+        ...[0, 1, 2].map(bi => ({
+          label: BLOCK_NAMES[bi],
+          data: weekStats.map(w => w.avgs[bi]),
+          backgroundColor: DOW_NAMES.map((_, d) =>
+            d === dow ? BLOCK_COLORS[bi] : BLOCK_COLORS[bi] + '44'
+          ),
+          borderColor: DOW_NAMES.map((_, d) =>
+            d === dow ? BLOCK_COLORS[bi] : BLOCK_COLORS[bi] + '99'
+          ),
+          borderWidth: DOW_NAMES.map((_, d) => d === dow ? 2.5 : 1),
+          borderRadius: 4
+        })),
+        {
+          label: '合計',
+          data: weekStats.map(w => w.avgs[0] + w.avgs[1] + w.avgs[2]),
+          backgroundColor: DOW_NAMES.map((_, d) =>
+            d === dow ? '#37474f' : '#37474f44'
+          ),
+          borderColor: DOW_NAMES.map((_, d) =>
+            d === dow ? '#37474f' : '#37474f99'
+          ),
+          borderWidth: DOW_NAMES.map((_, d) => d === dow ? 2.5 : 1),
+          borderRadius: 4
+        }
+      ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -537,8 +560,8 @@ function renderDowChart(dates, byDate, dow) {
               return `${DOW_NAMES[d]}曜日（${cnt}日分の平均）${d === dow ? ' ◀ 選択中' : ''}`;
             },
             footer: items => {
-              const total = items.reduce((s, i) => s + (i.raw || 0), 0);
-              return `合計平均: ${total.toLocaleString()} 分`;
+              const totalItem = items.find(i => i.dataset.label === '合計');
+              return totalItem ? `合計平均: ${totalItem.raw.toLocaleString()} 分` : '';
             }
           }
         }
