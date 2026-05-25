@@ -159,7 +159,7 @@ td.category { background: #f0f4ff; font-weight: bold; font-size: 11px; color: #4
     </div>
     <div id="csvStep2" style="display:none;">
       <p style="font-size:12px;margin-bottom:8px;">出力する雇用区分を選択してください</p>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
         <label style="font-size:13px;display:flex;align-items:center;gap:8px;">
           <input type="checkbox" id="chkS" checked> <span style="color:#1a73e8;font-weight:bold;">社員</span>
         </label>
@@ -169,6 +169,10 @@ td.category { background: #f0f4ff; font-weight: bold; font-size: 11px; color: #4
         <label style="font-size:13px;display:flex;align-items:center;gap:8px;">
           <input type="checkbox" id="chkA" checked> <span style="color:#e65100;font-weight:bold;">アルバイト</span>
         </label>
+      </div>
+      <div style="font-size:11px;color:#888;margin-bottom:4px;">企画別合計（期間・全区分）</div>
+      <div id="csvRowPreview" style="background:#f5f0ff;border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:12px;min-height:32px;display:flex;flex-direction:column;gap:4px;">
+        <span style="color:#aaa;">集計中...</span>
       </div>
       <div class="modal-footer">
         <button class="btn-cancel" onclick="csvBack()">戻る</button>
@@ -549,7 +553,7 @@ function closeCsvModal() {
   document.getElementById('csvOverlay').classList.remove('open');
 }
 
-function csvStep2() {
+async function csvStep2() {
   const start = document.getElementById('csvStartDate').value;
   const end = document.getElementById('csvEndDate').value;
   if (!start || !end || start > end) {
@@ -558,6 +562,37 @@ function csvStep2() {
   }
   document.getElementById('csvStep1').style.display = 'none';
   document.getElementById('csvStep2').style.display = 'block';
+
+  // 企画別合計プレビューを集計
+  const preview = document.getElementById('csvRowPreview');
+  preview.innerHTML = '<span style="color:#aaa;">集計中...</span>';
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/records?date=gte.${start}&date=lte.${end}&select=row_idx,col_idx,people`, { headers: HEADERS });
+    const rows = await res.json();
+    const rowTotals = new Array(ROWS.length).fill(0);
+    rows.forEach(r => {
+      try {
+        JSON.parse(r.people).forEach(p => {
+          rowTotals[r.row_idx] += parseInt(p.min) || 0;
+        });
+      } catch(e) {}
+    });
+    const items = ROWS
+      .map((row, ri) => ({ label: row.label, total: rowTotals[ri] }))
+      .filter(item => item.total > 0);
+    if (items.length > 0) {
+      preview.innerHTML = items.map(item =>
+        `<div style="display:flex;justify-content:space-between;border-bottom:1px solid #e8dff5;padding:2px 0;">
+          <span style="color:#444;">${item.label}</span>
+          <b style="color:#6a1b9a;">${item.total} 分</b>
+        </div>`
+      ).join('');
+    } else {
+      preview.innerHTML = '<span style="color:#aaa;">この期間のデータはありません</span>';
+    }
+  } catch(e) {
+    preview.innerHTML = '<span style="color:#c62828;">取得エラー</span>';
+  }
 }
 
 function csvBack() {
